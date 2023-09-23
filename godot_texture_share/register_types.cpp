@@ -1,6 +1,7 @@
 #include "register_types.hpp"
 
 #include "godot_texture_share.hpp"
+#include "texture_sender.hpp"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/class_db.hpp>
@@ -15,14 +16,13 @@ void initialize_module(ModuleInitializationLevel p_level)
 		return;
 
 	ClassDB::register_class<GodotTextureShare>();
+	ClassDB::register_class<TextureSender>();
 }
 
 void uninitialize_module(ModuleInitializationLevel p_level)
 {
 	if(p_level != MODULE_INITIALIZATION_LEVEL_SCENE)
-	{
 		return;
-	}
 }
 
 extern "C"

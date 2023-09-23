@@ -6,6 +6,8 @@
 
 #include <texture_share_vk/opengl/texture_share_gl_client.h>
 
+#include "rendering_backend.hpp"
+
 class GodotTextureShare : public godot::Texture2D
 {
 	GDCLASS(GodotTextureShare, Texture2D);
@@ -13,6 +15,9 @@ class GodotTextureShare : public godot::Texture2D
 	public:
 	GodotTextureShare();
 	~GodotTextureShare() override;
+
+	static texture_format_t     convert_godot_to_rendering_device_format(godot::Image::Format format);
+	static godot::Image::Format convert_rendering_device_to_godot_format(texture_format_t format);
 
 	void        _init();
 	static void _register_methods();
@@ -23,9 +28,7 @@ class GodotTextureShare : public godot::Texture2D
 
 	bool _has_alpha() const override { return true; }
 
-	virtual godot::RID get_rid() const { return this->_texture; }
-
-	// bool _is_pixel_opaque(int32_t x, int32_t y) const override;
+	// virtual godot::RID _get_rid() override { return this->_texture; }
 
 	virtual void set_flags(const int64_t flags) { _flags = flags; }
 
@@ -41,23 +44,38 @@ class GodotTextureShare : public godot::Texture2D
 	godot::String get_shared_name() const;
 	void          set_shared_name(godot::String shared_name);
 
+	void connect_to_frame_pre_draw();
+	bool is_connected_to_frame_pre_draw();
+	void disconnect_to_frame_pre_draw();
+
 	protected:
 	static void _bind_methods();
 
 	bool _create_receiver(const std::string &name);
 	void _receive_texture();
+
+	bool _check_and_update_shared_texture();
 	void _update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format);
 
 	private:
 	// Texture
-	godot::RID _texture   = godot::RID();
-	GLuint     _gl_tex_id = 0;
-	int64_t    _width = 0, _height = 0;
-	uint32_t   _flags;
+	godot::RID   _texture    = godot::RID();
+	texture_id_t _texture_id = 0;
+
+	godot::Image::Format _format = godot::Image::FORMAT_MAX;
+	uint32_t             _width  = 0;
+	uint32_t             _height = 0;
+
+	uint32_t _flags;
 
 	// TextureShareReceiver
-	std::unique_ptr<TextureShareGlClient> _receiver = nullptr;
-	std::string                           _channel_name;
+	std::unique_ptr<texture_share_client_t> _receiver = nullptr;
+	std::string                             _channel_name;
+
+#ifndef USE_OPENGL
+	VkFence _fence;
+#endif
 
 	void _create_initial_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format);
+	void receive_texture_internal();
 };

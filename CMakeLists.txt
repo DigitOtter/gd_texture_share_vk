@@ -16,7 +16,7 @@ project("${PROJECT_NAME}" VERSION 1.0.0)
 
 include(GNUInstallDirs)
 
-option(ENABLE_TESTING "Compile tests" OFF)
+option(USE_OPENGL "Build for Godot OpenGl Backend" OFF)
 
 set (CMAKE_CXX_STANDARD 20)
 
@@ -27,6 +27,7 @@ find_package(TextureShareVulkan REQUIRED)
 # List library files here
 set(LIB_SRC_FILES
 	"godot_texture_share/godot_texture_share.cpp"
+	"godot_texture_share/texture_sender.cpp"
 	"godot_texture_share/register_types.cpp"
 )
 
@@ -35,6 +36,14 @@ set(LIB_SRC_FILES
 add_library("${LIBRARY_NAME}" SHARED ${LIB_SRC_FILES})
 add_library("${NAMESPACE_NAME}::${LIBRARY_NAME}" ALIAS ${LIBRARY_NAME})
 target_compile_options(${LIBRARY_NAME} PUBLIC $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:-Wall -Wextra>)
+
+if(USE_OPENGL)
+	target_compile_definitions(${LIBRARY_NAME} PRIVATE USE_OPENGL)
+	set(TSVLibraries TextureShareVulkan::TextureShareOpenGL)
+else()
+	target_compile_definitions(${LIBRARY_NAME} PRIVATE USE_VULKAN)
+	set(TSVLibraries TextureShareVulkan::TextureShareVulkan)
+endif()
 
 target_include_directories(${LIBRARY_NAME}
 	PUBLIC
@@ -47,7 +56,7 @@ target_include_directories(${LIBRARY_NAME}
 target_link_libraries(${LIBRARY_NAME}
 	PUBLIC
 	    godot::cpp
-		TextureShareVulkan::TextureShareOpenGL
+		${TSVLibraries}
 
 	PRIVATE
 )
