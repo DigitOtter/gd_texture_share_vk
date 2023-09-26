@@ -1,18 +1,19 @@
-#include "godot_texture_share.hpp"
+#include "shared_texture.hpp"
+
+#include "format_conversion.hpp"
 
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/error_macros.hpp>
 
-GodotTextureShare::GodotTextureShare()
+SharedTexture::SharedTexture()
 {
-	this->_receiver.reset(new texture_share_client_t());
-
 #ifdef USE_OPENGL
 	if(!ExternalHandleGl::LoadGlEXT())
 		ERR_PRINT("Failed to load OpenGL Extensions");
 
 #else
+	// Get Vulkan data from RenderingDevice
 	using godot::RenderingDevice;
 	using godot::RID;
 
@@ -27,7 +28,7 @@ GodotTextureShare::GodotTextureShare()
 	uint32_t vk_queue_index =
 		(uint32_t)prd->get_driver_resource(RenderingDevice::DRIVER_RESOURCE_VULKAN_QUEUE_FAMILY_INDEX, RID(), 0);
 
-	this->_receiver->InitializeVulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
+	this->_tsv_client.InitializeVulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
 
 	VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
 	VK_CHECK(vkCreateFence(vk_dev, &fence_info, nullptr, &this->_fence));
@@ -37,7 +38,7 @@ GodotTextureShare::GodotTextureShare()
 	this->_create_initial_texture(1, 1, godot::Image::FORMAT_RGBA8);
 }
 
-GodotTextureShare::~GodotTextureShare()
+SharedTexture::~SharedTexture()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	if(this->_texture.is_valid())
@@ -60,75 +61,8 @@ GodotTextureShare::~GodotTextureShare()
 #endif
 }
 
-godot::Image::Format GodotTextureShare::convert_rendering_device_to_godot_format(texture_format_t format)
-{
-#ifdef USE_OPENGL
-	switch(format)
-	{
-		case GL_BGRA:
-		case GL_RGBA:
-			return godot::Image::Format::FORMAT_RGBA8;
-
-		default:
-			return godot::Image::Format::FORMAT_MAX;
-	}
-#else
-	switch(format)
-	{
-		case VkFormat::VK_FORMAT_R8G8B8A8_UNORM:
-		case VkFormat::VK_FORMAT_B8G8R8A8_UNORM:
-			return godot::Image::Format::FORMAT_RGBA8;
-
-		case VkFormat::VK_FORMAT_B8G8R8_UNORM:
-		case VkFormat::VK_FORMAT_R8G8B8_UNORM:
-			return godot::Image::Format::FORMAT_RGB8;
-
-		default:
-			return godot::Image::Format::FORMAT_MAX;
-	}
-#endif
-}
-
-texture_format_t GodotTextureShare::convert_godot_to_rendering_device_format(godot::Image::Format format)
-{
-#ifdef USE_OPENGL
-	switch(format)
-	{
-		case godot::Image::Format::FORMAT_RGBA8:
-			return GL_RGBA;
-		case godot::Image::Format::FORMAT_RGB8:
-			return GL_RGB;
-		default:
-			return GL_NONE;
-	}
-#else
-	switch(format)
-	{
-		case godot::Image::Format::FORMAT_RGBA8:
-			return VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
-		case godot::Image::Format::FORMAT_RGB8:
-			return VkFormat::VK_FORMAT_R8G8B8_UNORM;
-		default:
-			return VkFormat::VK_FORMAT_UNDEFINED;
-	}
-#endif
-}
-
-void GodotTextureShare::_init()
-{
-	assert(this->_texture == godot::RID());
-	this->_width  = 0;
-	this->_height = 0;
-	this->_flags  = 0;
-
-	this->_receiver.reset(nullptr);
-	this->_channel_name = "";
-
-	this->_create_initial_texture(1, 1, godot::Image::FORMAT_RGB8);
-}
-
-void GodotTextureShare::_draw(const godot::RID &to_canvas_item, const godot::Vector2 &pos, const godot::Color &modulate,
-                              bool transpose) const
+void SharedTexture::_draw(const godot::RID &to_canvas_item, const godot::Vector2 &pos, const godot::Color &modulate,
+                          bool transpose) const
 {
 	// Code taken from godot source ImageTexture class
 	if((this->_width | this->_height) == 0)
@@ -139,8 +73,8 @@ void GodotTextureShare::_draw(const godot::RID &to_canvas_item, const godot::Vec
 		transpose);
 }
 
-void GodotTextureShare::_draw_rect(const godot::RID &to_canvas_item, const godot::Rect2 &rect, bool tile,
-                                   const godot::Color &modulate, bool transpose) const
+void SharedTexture::_draw_rect(const godot::RID &to_canvas_item, const godot::Rect2 &rect, bool tile,
+                               const godot::Color &modulate, bool transpose) const
 {
 	// Code taken from godot source ImageTexture class
 	if((this->_width | this->_height) == 0)
@@ -150,9 +84,9 @@ void GodotTextureShare::_draw_rect(const godot::RID &to_canvas_item, const godot
 	                                                                      modulate, transpose);
 }
 
-void GodotTextureShare::_draw_rect_region(const godot::RID &to_canvas_item, const godot::Rect2 &rect,
-                                          const godot::Rect2 &src_rect, const godot::Color &modulate, bool transpose,
-                                          bool clip_uv) const
+void SharedTexture::_draw_rect_region(const godot::RID &to_canvas_item, const godot::Rect2 &rect,
+                                      const godot::Rect2 &src_rect, const godot::Color &modulate, bool transpose,
+                                      bool clip_uv) const
 {
 	// Code taken from godot source ImageTexture class
 	if((this->_width | this->_height) == 0)
@@ -162,62 +96,63 @@ void GodotTextureShare::_draw_rect_region(const godot::RID &to_canvas_item, cons
 		to_canvas_item, rect, this->_texture, src_rect, modulate, transpose, clip_uv);
 }
 
-godot::String GodotTextureShare::get_shared_name() const
+godot::String SharedTexture::get_shared_texture_name() const
 {
-	return godot::String(this->_channel_name.c_str());
+	return godot::String(this->_shared_texture_name.c_str());
 }
 
-void GodotTextureShare::set_shared_name(godot::String shared_name)
+void SharedTexture::set_shared_texture_name(godot::String shared_name)
 {
-	this->_channel_name = shared_name.ascii().ptr();
-	if(this->_create_receiver(this->_channel_name))
+	this->_shared_texture_name = shared_name.ascii().ptr();
+	if(this->_create_receiver(this->_shared_texture_name))
 		this->_receive_texture();
 }
 
-void GodotTextureShare::connect_to_frame_pre_draw()
+void SharedTexture::_receive_texture()
+{
+	return this->receive_texture_internal();
+}
+
+void SharedTexture::connect_to_frame_pre_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	prs->connect("frame_pre_draw", godot::Callable(this, "__receive_texture"));
 }
 
-bool GodotTextureShare::is_connected_to_frame_pre_draw()
+bool SharedTexture::is_connected_to_frame_pre_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	return prs->is_connected("frame_pre_draw", godot::Callable(this, "__receive_texture"));
 }
 
-void GodotTextureShare::disconnect_to_frame_pre_draw()
+void SharedTexture::disconnect_to_frame_pre_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	prs->disconnect("frame_pre_draw", godot::Callable(this, "__receive_texture"));
 }
 
-void GodotTextureShare::_bind_methods()
+void SharedTexture::_bind_methods()
 {
 	using godot::ClassDB;
 	using godot::D_METHOD;
 	using godot::PropertyInfo;
 
-	ClassDB::bind_method(D_METHOD("get_shared_name"), &GodotTextureShare::get_shared_name);
-	ClassDB::bind_method(D_METHOD("set_shared_name"), &GodotTextureShare::set_shared_name);
-	ClassDB::add_property("GodotTextureShare", PropertyInfo(godot::Variant::STRING, "shared_name"), "set_shared_name",
-	                      "get_shared_name");
+	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &SharedTexture::get_shared_texture_name);
+	ClassDB::bind_method(D_METHOD("set_shared_texture_name"), &SharedTexture::set_shared_texture_name);
+	ClassDB::add_property("SharedTexture", PropertyInfo(godot::Variant::STRING, "shared_texture_name"),
+	                      "set_shared_texture_name", "get_shared_texture_name");
 
-	ClassDB::bind_method(D_METHOD("connect_to_frame_pre_draw"), &GodotTextureShare::connect_to_frame_pre_draw);
-	ClassDB::bind_method(D_METHOD("is_connected_to_frame_pre_draw"),
-	                     &GodotTextureShare::is_connected_to_frame_pre_draw);
-	ClassDB::bind_method(D_METHOD("disconnect_to_frame_pre_draw"), &GodotTextureShare::disconnect_to_frame_pre_draw);
+	ClassDB::bind_method(D_METHOD("connect_to_frame_pre_draw"), &SharedTexture::connect_to_frame_pre_draw);
+	ClassDB::bind_method(D_METHOD("is_connected_to_frame_pre_draw"), &SharedTexture::is_connected_to_frame_pre_draw);
+	ClassDB::bind_method(D_METHOD("disconnect_to_frame_pre_draw"), &SharedTexture::disconnect_to_frame_pre_draw);
 
-	ClassDB::bind_method(D_METHOD("_receive_texture"), &GodotTextureShare::_receive_texture);
-	ClassDB::bind_method(D_METHOD("__receive_texture"), &GodotTextureShare::receive_texture_internal);
+	ClassDB::bind_method(D_METHOD("_receive_texture"), &SharedTexture::_receive_texture);
+	ClassDB::bind_method(D_METHOD("__receive_texture"), &SharedTexture::receive_texture_internal);
 }
 
-bool GodotTextureShare::_create_receiver(const std::string &name)
+bool SharedTexture::_create_receiver(const std::string &name)
 {
-	if(!this->_receiver)
-		this->_receiver.reset(new texture_share_client_t());
-
-	const auto *shared_image_data = this->_receiver->SharedImageHandle(name);
+	const auto *shared_image_data = this->_tsv_client.SharedImageHandle(name);
 	if(!shared_image_data)
 		return false;
 
@@ -227,23 +162,18 @@ bool GodotTextureShare::_create_receiver(const std::string &name)
 	return true;
 }
 
-void GodotTextureShare::_receive_texture()
+bool SharedTexture::_check_and_update_shared_texture()
 {
-	return this->receive_texture_internal();
-}
-
-bool GodotTextureShare::_check_and_update_shared_texture()
-{
-	if(!this->_receiver)
-		return false;
-
 	if(!this->_texture.is_valid())
 		return false;
 
-	const auto *const pimg_handle = this->_receiver->SharedImageHandle(this->_channel_name);
+	// Check if texture has changed externally
+	bool force_tsv_local_update = this->_tsv_client.HasImageMemoryChanged(this->_shared_texture_name);
+
+	const auto *const pimg_handle =
+		this->_tsv_client.SharedImageHandle(this->_shared_texture_name, force_tsv_local_update);
 	if(!pimg_handle)
 		return false;
-
 
 	const uint32_t             new_width  = pimg_handle->Width();
 	const uint32_t             new_height = pimg_handle->Height();
@@ -255,7 +185,7 @@ bool GodotTextureShare::_check_and_update_shared_texture()
 	return true;
 }
 
-void GodotTextureShare::_update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format)
+void SharedTexture::_update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format)
 {
 	this->_width  = width;
 	this->_height = height;
@@ -276,8 +206,8 @@ void GodotTextureShare::_update_texture(const uint64_t width, const uint64_t hei
 	this->_texture_id = (texture_id_t)prs->texture_get_native_handle(this->_texture, true);
 }
 
-void GodotTextureShare::_create_initial_texture(const uint64_t width, const uint64_t height,
-                                                const godot::Image::Format format)
+void SharedTexture::_create_initial_texture(const uint64_t width, const uint64_t height,
+                                            const godot::Image::Format format)
 {
 	this->_width  = width;
 	this->_height = height;
@@ -294,11 +224,8 @@ void GodotTextureShare::_create_initial_texture(const uint64_t width, const uint
 	prs->texture_set_force_redraw_if_visible(this->_texture, true);
 }
 
-void GodotTextureShare::receive_texture_internal()
+void SharedTexture::receive_texture_internal()
 {
-	if(!this->_receiver)
-		return;
-
 	if(!this->_check_and_update_shared_texture())
 		return;
 
@@ -312,10 +239,10 @@ void GodotTextureShare::receive_texture_internal()
 
 	GLint drawFboId = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
-	this->_receiver->RecvImageBlit(this->_channel_name, this->_texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
+	this->_receiver.RecvImageBlit(this->_channel_name, this->_texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
 #else
 	// Use VK_IMAGE_LAYOUT_UNDEFINED to discard old data
-	this->_receiver->RecvImageBlit(this->_channel_name, this->_texture_id, VK_IMAGE_LAYOUT_UNDEFINED,
-	                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, this->_fence);
+	this->_tsv_client.RecvImageBlit(this->_shared_texture_name, this->_texture_id, VK_IMAGE_LAYOUT_UNDEFINED,
+	                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, this->_fence);
 #endif
 }

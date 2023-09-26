@@ -1,14 +1,12 @@
 #include "texture_sender.hpp"
 
-#include "godot_texture_share.hpp"
+#include "format_conversion.hpp"
 
 #include <godot_cpp/classes/rendering_device.hpp>
 #include <godot_cpp/core/class_db.hpp>
 
 TextureSender::TextureSender()
 {
-	this->_client.reset(new texture_share_client_t());
-
 	// Load Extensions
 #ifdef USE_OPENGL
 	if(!ExternalHandleGl::LoadGlEXT())
@@ -29,7 +27,7 @@ TextureSender::TextureSender()
 	uint32_t vk_queue_index =
 		(uint32_t)prd->get_driver_resource(RenderingDevice::DRIVER_RESOURCE_VULKAN_QUEUE_FAMILY_INDEX, RID(), 0);
 
-	this->_client->InitializeVulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
+	this->_tsv_client.InitializeVulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
 
 	VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
 	VK_CHECK(vkCreateFence(vk_dev, &fence_info, nullptr, &this->_fence));
@@ -118,8 +116,8 @@ void TextureSender::_bind_methods()
 	using godot::PropertyInfo;
 
 	ClassDB::bind_method(D_METHOD("get_texture"), &TextureSender::get_texture);
-	ClassDB::bind_method(D_METHOD("set_texture"), &TextureSender::set_texture);
-	//	ClassDB::add_property("TextureSender", PropertyInfo(godot::Variant::STRING, "texture"), "set_texture",
+	ClassDB::bind_method(D_METHOD("set_texture", "texture", "format"), &TextureSender::set_texture);
+	//	ClassDB::add_property("TextureSender", PropertyInfo(godot::Variant::Type::OBJECT, "texture"), "set_texture",
 	//	                      "get_texture");
 
 	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &TextureSender::get_shared_texture_name);
@@ -143,7 +141,7 @@ bool TextureSender::update_shared_texture(uint32_t width, uint32_t height, godot
 	if(this->_width == width && this->_height == height && this->_format == format)
 		return true;
 
-	const texture_format_t gl_format = GodotTextureShare::convert_godot_to_rendering_device_format(format);
+	const texture_format_t gl_format = convert_godot_to_rendering_device_format(format);
 	if(gl_format == GL_NONE)
 		return false;
 
@@ -151,15 +149,14 @@ bool TextureSender::update_shared_texture(uint32_t width, uint32_t height, godot
 	this->_height = height;
 	this->_format = format;
 
-	assert(this->_client);
-	this->_client->InitImage(this->_shared_texture_name, width, height, gl_format, true);
+	this->_tsv_client.InitImage(this->_shared_texture_name, width, height, gl_format, true);
 
 	return true;
 }
 
 bool TextureSender::check_and_update_shared_texture(godot::Image::Format format)
 {
-	if(this->_texture.is_valid())
+	if(this->_texture.is_valid() && !this->_shared_texture_name.empty())
 	{
 		const uint32_t new_width  = this->_texture->get_width();
 		const uint32_t new_height = this->_texture->get_height();
@@ -171,13 +168,8 @@ bool TextureSender::check_and_update_shared_texture(godot::Image::Format format)
 
 bool TextureSender::send_texture_internal()
 {
-	if(this->_shared_texture_name.empty())
-		return false;
-
 	if(!this->check_and_update_shared_texture(this->_format))
 		return false;
-
-	assert(this->_client);
 
 	// Send texture
 	const texture_id_t texture_id =
@@ -191,16 +183,10 @@ bool TextureSender::send_texture_internal()
 
 	GLint drawFboId = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
-	this->_client->SendImageBlit(this->_shared_texture_name, texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
+	this->_client.SendImageBlit(this->_shared_texture_name, texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
 #else
-	//	VkClearColorValue clv{};
-	//	clv.float32[0] = 1.0f;
-	//	clv.float32[1] = 1.0f;
-	//	clv.float32[2] = 1.0f;
-	//	clv.float32[3] = 1.0f;
-	//	this->_client->ClearImage(this->_shared_texture_name, clv, this->_fence);
-	this->_client->SendImageBlit(this->_shared_texture_name, texture_id, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	                             this->_fence);
+	this->_tsv_client.SendImageBlit(this->_shared_texture_name, texture_id, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	                                this->_fence);
 #endif
 
 	return true;

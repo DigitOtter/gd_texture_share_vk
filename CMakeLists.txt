@@ -26,7 +26,7 @@ find_package(TextureShareVulkan REQUIRED)
 
 # List library files here
 set(LIB_SRC_FILES
-	"godot_texture_share/godot_texture_share.cpp"
+	"godot_texture_share/shared_texture.cpp"
 	"godot_texture_share/texture_sender.cpp"
 	"godot_texture_share/register_types.cpp"
 )

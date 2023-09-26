@@ -8,19 +8,15 @@
 
 #include "rendering_backend.hpp"
 
-class GodotTextureShare : public godot::Texture2D
+/*! \brief Receive a shared texture from other processes
+ */
+class SharedTexture : public godot::Texture2D
 {
-	GDCLASS(GodotTextureShare, Texture2D);
+	GDCLASS(SharedTexture, Texture2D);
 
 	public:
-	GodotTextureShare();
-	~GodotTextureShare() override;
-
-	static texture_format_t     convert_godot_to_rendering_device_format(godot::Image::Format format);
-	static godot::Image::Format convert_rendering_device_to_godot_format(texture_format_t format);
-
-	void        _init();
-	static void _register_methods();
+	SharedTexture();
+	~SharedTexture() override;
 
 	int32_t _get_width() const override { return this->_width; }
 
@@ -34,6 +30,7 @@ class GodotTextureShare : public godot::Texture2D
 
 	virtual int64_t get_flags() const { return _flags; }
 
+	// Functions copied from ImageTexture2D
 	void _draw(const godot::RID &to_canvas_item, const godot::Vector2 &pos, const godot::Color &modulate,
 	           bool transpose) const override;
 	void _draw_rect(const godot::RID &to_canvas_item, const godot::Rect2 &rect, bool tile, const godot::Color &modulate,
@@ -41,18 +38,39 @@ class GodotTextureShare : public godot::Texture2D
 	void _draw_rect_region(const godot::RID &to_canvas_item, const godot::Rect2 &rect, const godot::Rect2 &src_rect,
 	                       const godot::Color &modulate, bool transpose, bool clip_uv) const override;
 
-	godot::String get_shared_name() const;
-	void          set_shared_name(godot::String shared_name);
+	/*! \brief Get the share channel name
+	 */
+	godot::String get_shared_texture_name() const;
 
+	/*! \brief Set the share channel name
+	 */
+	void set_shared_texture_name(godot::String shared_name);
+
+	/*! \brief Manually receive texture. SHOULD be called after frame has been prepared (e.g. after `await
+	 * get_tree().process_frame`). It's easier to just connect this SharedTexture to the RenderingDevice's
+	 * frame_pre_draw with `connect_to_frame_pre_draw`
+	 */
+	void _receive_texture();
+
+	/*! \brief Connect to the RenderingDevice's frame_pre_draw signal. This automatically updates the shared texture
+	 * before every frame draw
+	 */
 	void connect_to_frame_pre_draw();
+
+	/*! \brief Check if connected to RenderingDevice's frame_pre_draw signal
+	 */
 	bool is_connected_to_frame_pre_draw();
+
+	/*! \brief Disconnect from the RenderingDevice's frame_post_draw signal
+	 */
 	void disconnect_to_frame_pre_draw();
 
 	protected:
 	static void _bind_methods();
 
+	/*! \brief Setup client to receive textures for name's shared texture
+	 */
 	bool _create_receiver(const std::string &name);
-	void _receive_texture();
 
 	bool _check_and_update_shared_texture();
 	void _update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format);
@@ -69,8 +87,8 @@ class GodotTextureShare : public godot::Texture2D
 	uint32_t _flags;
 
 	// TextureShareReceiver
-	std::unique_ptr<texture_share_client_t> _receiver = nullptr;
-	std::string                             _channel_name;
+	texture_share_client_t _tsv_client;
+	std::string            _shared_texture_name;
 
 #ifndef USE_OPENGL
 	VkFence _fence;
