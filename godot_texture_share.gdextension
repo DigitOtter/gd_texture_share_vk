@@ -1,0 +1,8 @@
+[configuration]
+
+entry_symbol = "texture_share_library_init"
+compatibility_minimum = 4.1
+
+[libraries]
+
+linux.x86_64 = "res://addons/godot_texture_share/libGodotTextureShare.so"
