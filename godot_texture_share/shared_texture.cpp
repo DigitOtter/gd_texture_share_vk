@@ -2,6 +2,8 @@
 
 #include "format_conversion.hpp"
 
+#include<assert.h>
+
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/error_macros.hpp>
@@ -152,12 +154,13 @@ void SharedTexture::_bind_methods()
 
 bool SharedTexture::_create_receiver(const std::string &name)
 {
-	const auto *shared_image_data = this->_tsv_client.SharedImageHandle(name);
+	const auto shared_image_lock = this->_tsv_client.find_image_data(name.c_str(), false);
+	const auto *shared_image_data = shared_image_lock.read();
 	if(!shared_image_data)
 		return false;
 
-	const godot::Image::Format format = convert_rendering_device_to_godot_format(shared_image_data->ImageFormat());
-	this->_update_texture(shared_image_data->Width(), shared_image_data->Height(), format);
+	const godot::Image::Format format = convert_rendering_device_to_godot_format(shared_image_data->format);
+	this->_update_texture(shared_image_data->width, shared_image_data->height, format);
 
 	return true;
 }
@@ -171,7 +174,7 @@ bool SharedTexture::_check_and_update_shared_texture()
 	bool force_tsv_local_update = this->_tsv_client.HasImageMemoryChanged(this->_shared_texture_name);
 
 	const auto *const pimg_handle =
-		this->_tsv_client.SharedImageHandle(this->_shared_texture_name, force_tsv_local_update);
+	    this->_tsv_client.SharedImageHandle(this->_shared_texture_name, force_tsv_local_update);
 	if(!pimg_handle)
 		return false;
 

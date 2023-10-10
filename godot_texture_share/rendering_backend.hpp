@@ -10,10 +10,12 @@ using texture_format_t       = GLuint;
 
 #else
 
-#include <texture_share_vk/texture_share_vk_client.h>
+#include <texture_share_vk/texture_share_vk_client.hpp>
 
 using texture_share_client_t = TextureShareVkClient;
 using texture_id_t           = VkImage;
 using texture_format_t       = VkFormat;
 
 #endif
+
+using tsv_image_format_t     = ImgFormat;

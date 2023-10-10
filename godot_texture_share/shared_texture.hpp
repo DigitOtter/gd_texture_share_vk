@@ -4,7 +4,7 @@
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 
-#include <texture_share_vk/opengl/texture_share_gl_client.h>
+#include <texture_share_vk/texture_share_vk_client.hpp>
 
 #include "rendering_backend.hpp"
 
@@ -72,7 +72,7 @@ class SharedTexture : public godot::Texture2D
 	 */
 	bool _create_receiver(const std::string &name);
 
-	bool _check_and_update_shared_texture();
+	//bool _check_and_update_shared_texture();
 	void _update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format);
 
 	private:
@@ -80,9 +80,7 @@ class SharedTexture : public godot::Texture2D
 	godot::RID   _texture    = godot::RID();
 	texture_id_t _texture_id = 0;
 
-	godot::Image::Format _format = godot::Image::FORMAT_MAX;
-	uint32_t             _width  = 0;
-	uint32_t             _height = 0;
+	uint32_t _handle_id = UINT32_MAX;
 
 	uint32_t _flags;
 

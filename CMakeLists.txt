@@ -22,7 +22,7 @@ set (CMAKE_CXX_STANDARD 20)
 
 add_subdirectory(godot-cpp)
 
-find_package(TextureShareVulkan REQUIRED)
+find_package(TextureShareVk REQUIRED)
 
 # List library files here
 set(LIB_SRC_FILES
@@ -39,10 +39,10 @@ target_compile_options(${LIBRARY_NAME} PUBLIC $<$<OR:$<CXX_COMPILER_ID:Clang>,$<
 
 if(USE_OPENGL)
 	target_compile_definitions(${LIBRARY_NAME} PRIVATE USE_OPENGL)
-	set(TSVLibraries TextureShareVulkan::TextureShareOpenGL)
+	set(TSVLibraries TextureShareVk::TextureShareGlClientCpp)
 else()
 	target_compile_definitions(${LIBRARY_NAME} PRIVATE USE_VULKAN)
-	set(TSVLibraries TextureShareVulkan::TextureShareVulkan)
+	set(TSVLibraries TextureShareVk::TextureShareVkClientCpp)
 endif()
 
 target_include_directories(${LIBRARY_NAME}
