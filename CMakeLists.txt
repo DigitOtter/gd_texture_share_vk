@@ -60,3 +60,6 @@ target_link_libraries(${LIBRARY_NAME}
 
 	PRIVATE
 )
+
+add_executable(test_exec "main.cpp")
+target_link_libraries(test_exec ${LIBRARY_NAME})

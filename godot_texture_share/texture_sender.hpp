@@ -1,6 +1,6 @@
 #pragma once
 
-#include <texture_share_vk/opengl/texture_share_gl_client.h>
+#include <texture_share_vk/texture_share_vk_client.hpp>
 
 #include <gdextension_interface.h>
 #include <godot_cpp/classes/rendering_server.hpp>

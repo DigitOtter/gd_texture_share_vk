@@ -2,7 +2,8 @@
 
 #include "format_conversion.hpp"
 
-#include<assert.h>
+#include <assert.h>
+#include <texture_share_vk/texture_share_vk_setup.hpp>
 
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/core/class_db.hpp>
@@ -30,7 +31,10 @@ SharedTexture::SharedTexture()
 	uint32_t vk_queue_index =
 		(uint32_t)prd->get_driver_resource(RenderingDevice::DRIVER_RESOURCE_VULKAN_QUEUE_FAMILY_INDEX, RID(), 0);
 
-	this->_tsv_client.InitializeVulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
+	TextureShareVkSetup vk_setup;
+	vk_setup.import_vulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
+	if(!this->_tsv_client.init_with_server_launch(vk_setup.release()))
+		ERR_PRINT("Failed to launch/connect to VkServer");
 
 	VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
 	VK_CHECK(vkCreateFence(vk_dev, &fence_info, nullptr, &this->_fence));
@@ -67,7 +71,7 @@ void SharedTexture::_draw(const godot::RID &to_canvas_item, const godot::Vector2
                           bool transpose) const
 {
 	// Code taken from godot source ImageTexture class
-	if((this->_width | this->_height) == 0)
+	if((this->_width || this->_height) == 0)
 		return;
 
 	godot::RenderingServer::get_singleton()->canvas_item_add_texture_rect(
@@ -170,20 +174,20 @@ bool SharedTexture::_check_and_update_shared_texture()
 	if(!this->_texture.is_valid())
 		return false;
 
-	// Check if texture has changed externally
-	bool force_tsv_local_update = this->_tsv_client.HasImageMemoryChanged(this->_shared_texture_name);
+	// Check if remote texture was changed
+	const ImageLookupResult res = this->_tsv_client.find_image(this->_shared_texture_name.c_str(), false);
+	if(res == ImageLookupResult::Error || res == ImageLookupResult::NotFound)
+		return false; // TODO: Error handling
+	else if(res == ImageLookupResult::RequiresUpdate)
+	{
+		// Update local texture to remote parameters
+		const auto  data_lock = this->_tsv_client.find_image_data(this->_shared_texture_name.c_str(), true);
+		const auto *data      = data_lock.read();
+		if(data == nullptr)
+			return false;
 
-	const auto *const pimg_handle =
-	    this->_tsv_client.SharedImageHandle(this->_shared_texture_name, force_tsv_local_update);
-	if(!pimg_handle)
-		return false;
-
-	const uint32_t             new_width  = pimg_handle->Width();
-	const uint32_t             new_height = pimg_handle->Height();
-	const godot::Image::Format new_format = convert_rendering_device_to_godot_format(pimg_handle->ImageFormat());
-
-	if(this->_width != new_width || this->_height != new_height || this->_format != new_format)
-		this->_update_texture(new_width, new_height, new_format);
+		this->_update_texture(data->width, data->height, convert_rendering_device_to_godot_format(data->format));
+	}
 
 	return true;
 }
@@ -192,7 +196,6 @@ void SharedTexture::_update_texture(const uint64_t width, const uint64_t height,
 {
 	this->_width  = width;
 	this->_height = height;
-	this->_format = format;
 
 	// Create new texture with correct width, height, and format
 	godot::Ref<godot::Image> img = godot::Image::create(width, height, false, format);
@@ -245,7 +248,7 @@ void SharedTexture::receive_texture_internal()
 	this->_receiver.RecvImageBlit(this->_channel_name, this->_texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
 #else
 	// Use VK_IMAGE_LAYOUT_UNDEFINED to discard old data
-	this->_tsv_client.RecvImageBlit(this->_shared_texture_name, this->_texture_id, VK_IMAGE_LAYOUT_UNDEFINED,
-	                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, this->_fence);
+	this->_tsv_client.recv_image(this->_shared_texture_name.c_str(), this->_texture_id, VK_IMAGE_LAYOUT_UNDEFINED,
+	                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, this->_fence, nullptr);
 #endif
 }

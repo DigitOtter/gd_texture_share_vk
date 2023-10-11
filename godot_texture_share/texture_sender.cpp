@@ -2,6 +2,9 @@
 
 #include "format_conversion.hpp"
 
+#include <assert.h>
+#include <texture_share_vk/texture_share_vk_setup.hpp>
+
 #include <godot_cpp/classes/rendering_device.hpp>
 #include <godot_cpp/core/class_db.hpp>
 
@@ -27,7 +30,9 @@ TextureSender::TextureSender()
 	uint32_t vk_queue_index =
 		(uint32_t)prd->get_driver_resource(RenderingDevice::DRIVER_RESOURCE_VULKAN_QUEUE_FAMILY_INDEX, RID(), 0);
 
-	this->_tsv_client.InitializeVulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
+	TextureShareVkSetup vk_setup;
+	vk_setup.import_vulkan(vk_inst, vk_dev, vk_ph_dev, vk_queue, vk_queue_index, true);
+	this->_tsv_client.init_with_server_launch(vk_setup.release());
 
 	VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
 	VK_CHECK(vkCreateFence(vk_dev, &fence_info, nullptr, &this->_fence));
@@ -141,15 +146,15 @@ bool TextureSender::update_shared_texture(uint32_t width, uint32_t height, godot
 	if(this->_width == width && this->_height == height && this->_format == format)
 		return true;
 
-	const texture_format_t gl_format = convert_godot_to_rendering_device_format(format);
-	if(gl_format == GL_NONE)
+	const tsv_image_format_t tsv_format = convert_godot_to_rendering_device_format(format);
+	if(tsv_format == tsv_image_format_t::Undefined)
 		return false;
 
 	this->_width  = width;
 	this->_height = height;
 	this->_format = format;
 
-	this->_tsv_client.InitImage(this->_shared_texture_name, width, height, gl_format, true);
+	this->_tsv_client.init_image(this->_shared_texture_name.c_str(), width, height, tsv_format, true);
 
 	return true;
 }
@@ -185,8 +190,9 @@ bool TextureSender::send_texture_internal()
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
 	this->_client.SendImageBlit(this->_shared_texture_name, texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
 #else
-	this->_tsv_client.SendImageBlit(this->_shared_texture_name, texture_id, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	                                this->_fence);
+	this->_tsv_client.send_image(this->_shared_texture_name.c_str(), texture_id,
+	                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	                             this->_fence, nullptr);
 #endif
 
 	return true;

@@ -72,7 +72,7 @@ class SharedTexture : public godot::Texture2D
 	 */
 	bool _create_receiver(const std::string &name);
 
-	//bool _check_and_update_shared_texture();
+	bool _check_and_update_shared_texture();
 	void _update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format);
 
 	private:
@@ -80,7 +80,8 @@ class SharedTexture : public godot::Texture2D
 	godot::RID   _texture    = godot::RID();
 	texture_id_t _texture_id = 0;
 
-	uint32_t _handle_id = UINT32_MAX;
+	int32_t _width  = 0;
+	int32_t _height = 0;
 
 	uint32_t _flags;
 
