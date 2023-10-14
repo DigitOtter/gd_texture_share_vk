@@ -1,5 +1,5 @@
-set(PROJECT_NAME "GodotTextureShare")
-set(HEADER_DIRECTORY "godot_texture_share")
+set(PROJECT_NAME "GdTextureShareVk")
+set(HEADER_DIRECTORY "gd_texture_share_vk")
 
 set(NAMESPACE_NAME "${PROJECT_NAME}")
 
@@ -26,9 +26,9 @@ find_package(TextureShareVk REQUIRED)
 
 # List library files here
 set(LIB_SRC_FILES
-	"godot_texture_share/shared_texture.cpp"
-	"godot_texture_share/texture_sender.cpp"
-	"godot_texture_share/register_types.cpp"
+	"gd_texture_share_vk/shared_texture.cpp"
+	"gd_texture_share_vk/texture_sender.cpp"
+	"gd_texture_share_vk/register_types.cpp"
 )
 
 ##########################################
