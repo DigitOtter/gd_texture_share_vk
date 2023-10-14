@@ -1,4 +1,4 @@
-#include "texture_sender.hpp"
+#include "tsv_sender.hpp"
 
 #include "format_conversion.hpp"
 
@@ -7,7 +7,7 @@
 #include <godot_cpp/classes/rendering_device.hpp>
 #include <godot_cpp/core/class_db.hpp>
 
-TextureSender::TextureSender()
+TsvSender::TsvSender()
 {
 	// Load Extensions
 #ifdef USE_OPENGL
@@ -48,7 +48,7 @@ TextureSender::TextureSender()
 #endif
 }
 
-TextureSender::~TextureSender()
+TsvSender::~TsvSender()
 {
 #ifndef USE_OPENGL
 	godot::RenderingDevice *const prd = godot::RenderingServer::get_singleton()->get_rendering_device();
@@ -64,19 +64,19 @@ TextureSender::~TextureSender()
 #endif
 }
 
-void TextureSender::set_texture(const godot::Ref<godot::Texture2D> &texture, godot::Image::Format texture_format)
+void TsvSender::set_texture(const godot::Ref<godot::Texture2D> &texture, godot::Image::Format texture_format)
 {
 	this->_texture = texture;
 	if(!this->_shared_texture_name.empty())
 		this->check_and_update_shared_texture(texture_format);
 }
 
-godot::Ref<godot::Texture2D> TextureSender::get_texture()
+godot::Ref<godot::Texture2D> TsvSender::get_texture()
 {
 	return this->_texture;
 }
 
-void TextureSender::set_shared_texture_name(const godot::String &shared_texture_name)
+void TsvSender::set_shared_texture_name(const godot::String &shared_texture_name)
 {
 	const std::string new_name = shared_texture_name.ascii().ptr();
 	if(new_name != this->_shared_texture_name)
@@ -88,61 +88,61 @@ void TextureSender::set_shared_texture_name(const godot::String &shared_texture_
 	}
 }
 
-godot::String TextureSender::get_shared_texture_name()
+godot::String TsvSender::get_shared_texture_name()
 {
 	return godot::String(this->_shared_texture_name.c_str());
 }
 
-bool TextureSender::send_texture()
+bool TsvSender::send_texture()
 {
 	return this->send_texture_internal();
 }
 
-void TextureSender::connect_to_frame_post_draw()
+void TsvSender::connect_to_frame_post_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	prs->connect("frame_post_draw", godot::Callable(this, "__send_texture"));
 }
 
-bool TextureSender::is_connected_to_frame_post_draw()
+bool TsvSender::is_connected_to_frame_post_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	return prs->is_connected("frame_post_draw", godot::Callable(this, "__send_texture"));
 }
 
-void TextureSender::disconnect_to_frame_post_draw()
+void TsvSender::disconnect_to_frame_post_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	prs->disconnect("frame_post_draw", godot::Callable(this, "__send_texture"));
 }
 
-void TextureSender::_bind_methods()
+void TsvSender::_bind_methods()
 {
 	using godot::ClassDB;
 	using godot::D_METHOD;
 	using godot::PropertyInfo;
 
-	ClassDB::bind_method(D_METHOD("get_texture"), &TextureSender::get_texture);
-	ClassDB::bind_method(D_METHOD("set_texture", "texture", "format"), &TextureSender::set_texture);
+	ClassDB::bind_method(D_METHOD("get_texture"), &TsvSender::get_texture);
+	ClassDB::bind_method(D_METHOD("set_texture", "texture", "format"), &TsvSender::set_texture);
 	//	ClassDB::add_property("TextureSender", PropertyInfo(godot::Variant::Type::OBJECT, "texture"), "set_texture",
 	//	                      "get_texture");
 
-	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &TextureSender::get_shared_texture_name);
-	ClassDB::bind_method(D_METHOD("set_shared_texture_name"), &TextureSender::set_shared_texture_name);
+	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &TsvSender::get_shared_texture_name);
+	ClassDB::bind_method(D_METHOD("set_shared_texture_name"), &TsvSender::set_shared_texture_name);
 	ClassDB::add_property("TextureSender", PropertyInfo(godot::Variant::STRING, "shared_texture_name"),
 	                      "set_shared_texture_name", "get_shared_texture_name");
 
-	ClassDB::bind_method(D_METHOD("connect_to_frame_post_draw"), &TextureSender::connect_to_frame_post_draw);
-	ClassDB::bind_method(D_METHOD("is_connected_to_frame_post_draw"), &TextureSender::is_connected_to_frame_post_draw);
-	ClassDB::bind_method(D_METHOD("disconnect_to_frame_post_draw"), &TextureSender::disconnect_to_frame_post_draw);
+	ClassDB::bind_method(D_METHOD("connect_to_frame_post_draw"), &TsvSender::connect_to_frame_post_draw);
+	ClassDB::bind_method(D_METHOD("is_connected_to_frame_post_draw"), &TsvSender::is_connected_to_frame_post_draw);
+	ClassDB::bind_method(D_METHOD("disconnect_to_frame_post_draw"), &TsvSender::disconnect_to_frame_post_draw);
 
-	ClassDB::bind_method(D_METHOD("send_texture"), &TextureSender::send_texture);
+	ClassDB::bind_method(D_METHOD("send_texture"), &TsvSender::send_texture);
 
 	// Connect this to "frame_post_draw"
-	ClassDB::bind_method(D_METHOD("__send_texture"), &TextureSender::send_texture_internal);
+	ClassDB::bind_method(D_METHOD("__send_texture"), &TsvSender::send_texture_internal);
 }
 
-bool TextureSender::update_shared_texture(uint32_t width, uint32_t height, godot::Image::Format format)
+bool TsvSender::update_shared_texture(uint32_t width, uint32_t height, godot::Image::Format format)
 {
 	assert(!this->_shared_texture_name.empty());
 	if(this->_width == width && this->_height == height && this->_format == format)
@@ -161,7 +161,7 @@ bool TextureSender::update_shared_texture(uint32_t width, uint32_t height, godot
 	return true;
 }
 
-bool TextureSender::check_and_update_shared_texture(godot::Image::Format format)
+bool TsvSender::check_and_update_shared_texture(godot::Image::Format format)
 {
 	if(this->_texture.is_valid() && !this->_shared_texture_name.empty())
 	{
@@ -173,7 +173,7 @@ bool TextureSender::check_and_update_shared_texture(godot::Image::Format format)
 	return false;
 }
 
-bool TextureSender::send_texture_internal()
+bool TsvSender::send_texture_internal()
 {
 	if(!this->check_and_update_shared_texture(this->_format))
 		return false;

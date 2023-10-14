@@ -8,13 +8,13 @@
 
 /*! \brief Receive a shared texture from other processes
  */
-class SharedTexture : public godot::Texture2D
+class TsvReceiveTexture : public godot::Texture2D
 {
-	GDCLASS(SharedTexture, Texture2D);
+	GDCLASS(TsvReceiveTexture, Texture2D);
 
 	public:
-	SharedTexture();
-	~SharedTexture() override;
+	TsvReceiveTexture();
+	~TsvReceiveTexture() override;
 
 	int32_t _get_width() const override { return this->_width; }
 

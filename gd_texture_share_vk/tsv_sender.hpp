@@ -9,13 +9,13 @@
 
 /*! \brief Send textures to other processes
  */
-class TextureSender : public godot::Resource
+class TsvSender : public godot::Resource
 {
-	GDCLASS(TextureSender, godot::Resource);
+	GDCLASS(TsvSender, godot::Resource);
 
 	public:
-	TextureSender();
-	~TextureSender() override;
+	TsvSender();
+	~TsvSender() override;
 
 	/*! \brief Specify the texture to share
 	 */

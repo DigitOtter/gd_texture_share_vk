@@ -1,4 +1,4 @@
-#include "shared_texture.hpp"
+#include "tsv_receive_texture.hpp"
 
 #include "format_conversion.hpp"
 
@@ -8,7 +8,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/error_macros.hpp>
 
-SharedTexture::SharedTexture()
+TsvReceiveTexture::TsvReceiveTexture()
 {
 #ifdef USE_OPENGL
 	if(!TextureShareGlClient::initialize_gl_external())
@@ -45,7 +45,7 @@ SharedTexture::SharedTexture()
 	// this->_create_initial_texture(1, 1, godot::Image::FORMAT_RGBA8);
 }
 
-SharedTexture::~SharedTexture()
+TsvReceiveTexture::~TsvReceiveTexture()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	if(this->_texture.is_valid())
@@ -68,8 +68,8 @@ SharedTexture::~SharedTexture()
 #endif
 }
 
-void SharedTexture::_draw(const godot::RID &to_canvas_item, const godot::Vector2 &pos, const godot::Color &modulate,
-                          bool transpose) const
+void TsvReceiveTexture::_draw(const godot::RID &to_canvas_item, const godot::Vector2 &pos, const godot::Color &modulate,
+                              bool transpose) const
 {
 	// Code taken from godot source ImageTexture class
 	if((this->_width || this->_height) == 0)
@@ -80,8 +80,8 @@ void SharedTexture::_draw(const godot::RID &to_canvas_item, const godot::Vector2
 		transpose);
 }
 
-void SharedTexture::_draw_rect(const godot::RID &to_canvas_item, const godot::Rect2 &rect, bool tile,
-                               const godot::Color &modulate, bool transpose) const
+void TsvReceiveTexture::_draw_rect(const godot::RID &to_canvas_item, const godot::Rect2 &rect, bool tile,
+                                   const godot::Color &modulate, bool transpose) const
 {
 	// Code taken from godot source ImageTexture class
 	if((this->_width | this->_height) == 0)
@@ -91,9 +91,9 @@ void SharedTexture::_draw_rect(const godot::RID &to_canvas_item, const godot::Re
 	                                                                      modulate, transpose);
 }
 
-void SharedTexture::_draw_rect_region(const godot::RID &to_canvas_item, const godot::Rect2 &rect,
-                                      const godot::Rect2 &src_rect, const godot::Color &modulate, bool transpose,
-                                      bool clip_uv) const
+void TsvReceiveTexture::_draw_rect_region(const godot::RID &to_canvas_item, const godot::Rect2 &rect,
+                                          const godot::Rect2 &src_rect, const godot::Color &modulate, bool transpose,
+                                          bool clip_uv) const
 {
 	// Code taken from godot source ImageTexture class
 	if((this->_width | this->_height) == 0)
@@ -103,57 +103,58 @@ void SharedTexture::_draw_rect_region(const godot::RID &to_canvas_item, const go
 		to_canvas_item, rect, this->_texture, src_rect, modulate, transpose, clip_uv);
 }
 
-godot::String SharedTexture::get_shared_texture_name() const
+godot::String TsvReceiveTexture::get_shared_texture_name() const
 {
 	return godot::String(this->_shared_texture_name.c_str());
 }
 
-void SharedTexture::set_shared_texture_name(godot::String shared_name)
+void TsvReceiveTexture::set_shared_texture_name(godot::String shared_name)
 {
 	this->_shared_texture_name = shared_name.ascii().ptr();
 	this->_check_and_update_shared_texture();
 }
 
-void SharedTexture::_receive_texture()
+void TsvReceiveTexture::_receive_texture()
 {
 	return this->receive_texture_internal();
 }
 
-void SharedTexture::connect_to_frame_pre_draw()
+void TsvReceiveTexture::connect_to_frame_pre_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	prs->connect("frame_pre_draw", godot::Callable(this, "__receive_texture"));
 }
 
-bool SharedTexture::is_connected_to_frame_pre_draw()
+bool TsvReceiveTexture::is_connected_to_frame_pre_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	return prs->is_connected("frame_pre_draw", godot::Callable(this, "__receive_texture"));
 }
 
-void SharedTexture::disconnect_to_frame_pre_draw()
+void TsvReceiveTexture::disconnect_to_frame_pre_draw()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
 	prs->disconnect("frame_pre_draw", godot::Callable(this, "__receive_texture"));
 }
 
-void SharedTexture::_bind_methods()
+void TsvReceiveTexture::_bind_methods()
 {
 	using godot::ClassDB;
 	using godot::D_METHOD;
 	using godot::PropertyInfo;
 
-	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &SharedTexture::get_shared_texture_name);
-	ClassDB::bind_method(D_METHOD("set_shared_texture_name"), &SharedTexture::set_shared_texture_name);
+	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &TsvReceiveTexture::get_shared_texture_name);
+	ClassDB::bind_method(D_METHOD("set_shared_texture_name"), &TsvReceiveTexture::set_shared_texture_name);
 	ClassDB::add_property("SharedTexture", PropertyInfo(godot::Variant::STRING, "shared_texture_name"),
 	                      "set_shared_texture_name", "get_shared_texture_name");
 
-	ClassDB::bind_method(D_METHOD("connect_to_frame_pre_draw"), &SharedTexture::connect_to_frame_pre_draw);
-	ClassDB::bind_method(D_METHOD("is_connected_to_frame_pre_draw"), &SharedTexture::is_connected_to_frame_pre_draw);
-	ClassDB::bind_method(D_METHOD("disconnect_to_frame_pre_draw"), &SharedTexture::disconnect_to_frame_pre_draw);
+	ClassDB::bind_method(D_METHOD("connect_to_frame_pre_draw"), &TsvReceiveTexture::connect_to_frame_pre_draw);
+	ClassDB::bind_method(D_METHOD("is_connected_to_frame_pre_draw"),
+	                     &TsvReceiveTexture::is_connected_to_frame_pre_draw);
+	ClassDB::bind_method(D_METHOD("disconnect_to_frame_pre_draw"), &TsvReceiveTexture::disconnect_to_frame_pre_draw);
 
-	ClassDB::bind_method(D_METHOD("_receive_texture"), &SharedTexture::_receive_texture);
-	ClassDB::bind_method(D_METHOD("__receive_texture"), &SharedTexture::receive_texture_internal);
+	ClassDB::bind_method(D_METHOD("_receive_texture"), &TsvReceiveTexture::_receive_texture);
+	ClassDB::bind_method(D_METHOD("__receive_texture"), &TsvReceiveTexture::receive_texture_internal);
 }
 
 // bool SharedTexture::_create_receiver(const std::string &name)
@@ -169,7 +170,7 @@ void SharedTexture::_bind_methods()
 //	return true;
 //}
 
-bool SharedTexture::_check_and_update_shared_texture()
+bool TsvReceiveTexture::_check_and_update_shared_texture()
 {
 	bool update_texture = false;
 
@@ -209,7 +210,7 @@ bool SharedTexture::_check_and_update_shared_texture()
 	return true;
 }
 
-void SharedTexture::_update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format)
+void TsvReceiveTexture::_update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format)
 {
 	this->_width  = width;
 	this->_height = height;
@@ -229,8 +230,8 @@ void SharedTexture::_update_texture(const uint64_t width, const uint64_t height,
 	this->_texture_id = (texture_id_t)prs->texture_get_native_handle(this->_texture, true);
 }
 
-void SharedTexture::_create_initial_texture(const uint64_t width, const uint64_t height,
-                                            const godot::Image::Format format)
+void TsvReceiveTexture::_create_initial_texture(const uint64_t width, const uint64_t height,
+                                                const godot::Image::Format format)
 {
 	this->_width  = width;
 	this->_height = height;
@@ -247,7 +248,7 @@ void SharedTexture::_create_initial_texture(const uint64_t width, const uint64_t
 	prs->texture_set_force_redraw_if_visible(this->_texture, true);
 }
 
-void SharedTexture::receive_texture_internal()
+void TsvReceiveTexture::receive_texture_internal()
 {
 	if(!this->_check_and_update_shared_texture())
 		return;

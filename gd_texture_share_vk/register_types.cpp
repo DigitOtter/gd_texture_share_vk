@@ -1,7 +1,7 @@
 #include "register_types.hpp"
 
-#include "shared_texture.hpp"
-#include "texture_sender.hpp"
+#include "tsv_receive_texture.hpp"
+#include "tsv_sender.hpp"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/class_db.hpp>
@@ -14,9 +14,9 @@ void initialize_module(ModuleInitializationLevel p_level)
 {
 	if(p_level != MODULE_INITIALIZATION_LEVEL_SCENE)
 		return;
-	
-	ClassDB::register_class<SharedTexture>();
-	ClassDB::register_class<TextureSender>();
+
+	ClassDB::register_class<TsvReceiveTexture>();
+	ClassDB::register_class<TsvSender>();
 }
 
 void uninitialize_module(ModuleInitializationLevel p_level)

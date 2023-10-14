@@ -26,8 +26,8 @@ find_package(TextureShareVk REQUIRED)
 
 # List library files here
 set(LIB_SRC_FILES
-	"gd_texture_share_vk/shared_texture.cpp"
-	"gd_texture_share_vk/texture_sender.cpp"
+	"gd_texture_share_vk/tsv_receive_texture.cpp"
+	"gd_texture_share_vk/tsv_sender.cpp"
 	"gd_texture_share_vk/register_types.cpp"
 )
 
