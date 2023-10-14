@@ -3,7 +3,6 @@
 #include "format_conversion.hpp"
 
 #include <assert.h>
-#include <texture_share_vk/texture_share_vk_setup.hpp>
 
 #include <godot_cpp/classes/rendering_server.hpp>
 #include <godot_cpp/core/class_db.hpp>
@@ -12,9 +11,11 @@
 SharedTexture::SharedTexture()
 {
 #ifdef USE_OPENGL
-	if(!ExternalHandleGl::LoadGlEXT())
+	if(!TextureShareGlClient::initialize_gl_external())
 		ERR_PRINT("Failed to load OpenGL Extensions");
 
+	if(!this->_tsv_client.init_with_server_launch())
+		ERR_PRINT("Failed to launch/connect to shared texture server");
 #else
 	// Get Vulkan data from RenderingDevice
 	using godot::RenderingDevice;
@@ -41,7 +42,7 @@ SharedTexture::SharedTexture()
 
 #endif
 
-	this->_create_initial_texture(1, 1, godot::Image::FORMAT_RGBA8);
+	// this->_create_initial_texture(1, 1, godot::Image::FORMAT_RGBA8);
 }
 
 SharedTexture::~SharedTexture()
@@ -110,8 +111,7 @@ godot::String SharedTexture::get_shared_texture_name() const
 void SharedTexture::set_shared_texture_name(godot::String shared_name)
 {
 	this->_shared_texture_name = shared_name.ascii().ptr();
-	if(this->_create_receiver(this->_shared_texture_name))
-		this->_receive_texture();
+	this->_check_and_update_shared_texture();
 }
 
 void SharedTexture::_receive_texture()
@@ -156,35 +156,52 @@ void SharedTexture::_bind_methods()
 	ClassDB::bind_method(D_METHOD("__receive_texture"), &SharedTexture::receive_texture_internal);
 }
 
-bool SharedTexture::_create_receiver(const std::string &name)
-{
-	const auto shared_image_lock = this->_tsv_client.find_image_data(name.c_str(), false);
-	const auto *shared_image_data = shared_image_lock.read();
-	if(!shared_image_data)
-		return false;
+// bool SharedTexture::_create_receiver(const std::string &name)
+//{
+//	const auto  shared_image_lock = this->_tsv_client.find_image_data(name.c_str(), false);
+//	const auto *shared_image_data = shared_image_lock.read();
+//	if(!shared_image_data)
+//		return false;
 
-	const godot::Image::Format format = convert_rendering_device_to_godot_format(shared_image_data->format);
-	this->_update_texture(shared_image_data->width, shared_image_data->height, format);
+//	const godot::Image::Format format = convert_rendering_device_to_godot_format(shared_image_data->format);
+//	this->_update_texture(shared_image_data->width, shared_image_data->height, format);
 
-	return true;
-}
+//	return true;
+//}
 
 bool SharedTexture::_check_and_update_shared_texture()
 {
+	bool update_texture = false;
+
+	// Check if local texture was initialized
 	if(!this->_texture.is_valid())
-		return false;
+		update_texture = true;
 
 	// Check if remote texture was changed
-	const ImageLookupResult res = this->_tsv_client.find_image(this->_shared_texture_name.c_str(), false);
+	ImageLookupResult res = this->_tsv_client.find_image(this->_shared_texture_name.c_str(), false);
 	if(res == ImageLookupResult::Error || res == ImageLookupResult::NotFound)
 		return false; // TODO: Error handling
 	else if(res == ImageLookupResult::RequiresUpdate)
 	{
 		// Update local texture to remote parameters
-		const auto  data_lock = this->_tsv_client.find_image_data(this->_shared_texture_name.c_str(), true);
+		res = this->_tsv_client.find_image(this->_shared_texture_name.c_str(), true);
+		if(res == ImageLookupResult::Found)
+			update_texture = true;
+		else if(res == ImageLookupResult::Error || res == ImageLookupResult::NotFound)
+			return false;
+	}
+
+	if(update_texture)
+	{
+		// Update local texture to remote parameters
+		const auto  data_lock = this->_tsv_client.find_image_data(this->_shared_texture_name.c_str(), false);
 		const auto *data      = data_lock.read();
 		if(data == nullptr)
 			return false;
+
+		if(!this->_texture.is_valid())
+			this->_create_initial_texture(data->width, data->height,
+			                              convert_rendering_device_to_godot_format(data->format));
 
 		this->_update_texture(data->width, data->height, convert_rendering_device_to_godot_format(data->format));
 	}
@@ -238,14 +255,15 @@ void SharedTexture::receive_texture_internal()
 
 		// Receive texture
 #ifdef USE_OPENGL
-	const texture_share_client_t::ImageExtent dim{
+	const ImageExtent dim{
 		{0,					 0					 },
 		{(GLsizei)this->_width, (GLsizei)this->_height},
 	};
 
 	GLint drawFboId = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
-	this->_receiver.RecvImageBlit(this->_channel_name, this->_texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
+	this->_tsv_client.recv_image(this->_shared_texture_name.c_str(), this->_texture_id, GL_TEXTURE_2D, false, drawFboId,
+	                             &dim);
 #else
 	// Use VK_IMAGE_LAYOUT_UNDEFINED to discard old data
 	this->_tsv_client.recv_image(this->_shared_texture_name.c_str(), this->_texture_id, VK_IMAGE_LAYOUT_UNDEFINED,

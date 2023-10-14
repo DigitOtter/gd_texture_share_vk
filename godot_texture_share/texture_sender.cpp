@@ -3,7 +3,6 @@
 #include "format_conversion.hpp"
 
 #include <assert.h>
-#include <texture_share_vk/texture_share_vk_setup.hpp>
 
 #include <godot_cpp/classes/rendering_device.hpp>
 #include <godot_cpp/core/class_db.hpp>
@@ -12,8 +11,11 @@ TextureSender::TextureSender()
 {
 	// Load Extensions
 #ifdef USE_OPENGL
-	if(!ExternalHandleGl::LoadGlEXT())
+	if(!TextureShareGlClient::initialize_gl_external())
 		ERR_PRINT("Failed to load OpenGL Extensions");
+
+	if(!this->_tsv_client.init_with_server_launch())
+		ERR_PRINT("Failed to launch/connect to shared texture server");
 
 #else
 	using godot::RenderingDevice;
@@ -181,14 +183,14 @@ bool TextureSender::send_texture_internal()
 		(texture_id_t)godot::RenderingServer::get_singleton()->texture_get_native_handle(this->_texture->get_rid());
 
 #ifdef USE_OPENGL
-	const texture_share_client_t::ImageExtent dim{
+	const ImageExtent dim{
 		{0,					 0					 },
 		{(GLsizei)this->_width, (GLsizei)this->_height},
 	};
 
 	GLint drawFboId = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
-	this->_client.SendImageBlit(this->_shared_texture_name, texture_id, GL_TEXTURE_2D, dim, false, drawFboId);
+	this->_tsv_client.send_image(this->_shared_texture_name.c_str(), texture_id, GL_TEXTURE_2D, false, drawFboId, &dim);
 #else
 	this->_tsv_client.send_image(this->_shared_texture_name.c_str(), texture_id,
 	                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

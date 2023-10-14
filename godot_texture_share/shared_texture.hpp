@@ -4,8 +4,6 @@
 #include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/texture2d.hpp>
 
-#include <texture_share_vk/texture_share_vk_client.hpp>
-
 #include "rendering_backend.hpp"
 
 /*! \brief Receive a shared texture from other processes
@@ -70,7 +68,7 @@ class SharedTexture : public godot::Texture2D
 
 	/*! \brief Setup client to receive textures for name's shared texture
 	 */
-	bool _create_receiver(const std::string &name);
+	// bool _create_receiver(const std::string &name);
 
 	bool _check_and_update_shared_texture();
 	void _update_texture(const uint64_t width, const uint64_t height, const godot::Image::Format format);
@@ -82,6 +80,8 @@ class SharedTexture : public godot::Texture2D
 
 	int32_t _width  = 0;
 	int32_t _height = 0;
+
+	bool _image_found = false;
 
 	uint32_t _flags;
 
