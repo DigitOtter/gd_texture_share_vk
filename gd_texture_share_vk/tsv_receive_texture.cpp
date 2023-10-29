@@ -39,10 +39,10 @@ TsvReceiveTexture::TsvReceiveTexture()
 
 	VkFenceCreateInfo fence_info{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0};
 	VK_CHECK(vkCreateFence(vk_dev, &fence_info, nullptr, &this->_fence));
-
 #endif
 
-	// this->_create_initial_texture(1, 1, godot::Image::FORMAT_RGBA8);
+	this->_create_initial_texture(1, 1, godot::Image::FORMAT_RGBA8);
+	this->_shared_texture_initialized = false;
 }
 
 TsvReceiveTexture::~TsvReceiveTexture()
@@ -111,6 +111,7 @@ godot::String TsvReceiveTexture::get_shared_texture_name() const
 void TsvReceiveTexture::set_shared_texture_name(godot::String shared_name)
 {
 	this->_shared_texture_name = shared_name.ascii().ptr();
+	this->_shared_texture_initialized = false;
 	this->_check_and_update_shared_texture();
 }
 
@@ -175,7 +176,7 @@ bool TsvReceiveTexture::_check_and_update_shared_texture()
 	bool update_texture = false;
 
 	// Check if local texture was initialized
-	if(!this->_texture.is_valid())
+	if(!this->_shared_texture_initialized)
 		update_texture = true;
 
 	// Check if remote texture was changed
@@ -200,11 +201,12 @@ bool TsvReceiveTexture::_check_and_update_shared_texture()
 		if(data == nullptr)
 			return false;
 
-		if(!this->_texture.is_valid())
-			this->_create_initial_texture(data->width, data->height,
-			                              convert_rendering_device_to_godot_format(data->format));
+		//		if(!this->_texture.is_valid())
+		//			this->_create_initial_texture(data->width, data->height,
+		//			                              convert_rendering_device_to_godot_format(data->format));
 
 		this->_update_texture(data->width, data->height, convert_rendering_device_to_godot_format(data->format));
+		this->_shared_texture_initialized = true;
 	}
 
 	return true;

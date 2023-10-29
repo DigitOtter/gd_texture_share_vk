@@ -81,6 +81,7 @@ class TsvReceiveTexture : public godot::Texture2D
 	int32_t _width  = 0;
 	int32_t _height = 0;
 
+	bool _shared_texture_initialized = false;
 	bool _image_found = false;
 
 	uint32_t _flags;
