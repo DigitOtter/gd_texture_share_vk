@@ -110,7 +110,13 @@ godot::String TsvReceiveTexture::get_shared_texture_name() const
 
 void TsvReceiveTexture::set_shared_texture_name(godot::String shared_name)
 {
-	this->_shared_texture_name = shared_name.ascii().ptr();
+	if(godot::String(this->_shared_texture_name.c_str()) == shared_name)
+		return;
+
+	if(this->is_connected_to_frame_pre_draw())
+		this->disconnect_to_frame_pre_draw();
+
+	this->_shared_texture_name        = shared_name.ascii().ptr();
 	this->_shared_texture_initialized = false;
 	this->_check_and_update_shared_texture();
 }
@@ -144,9 +150,12 @@ void TsvReceiveTexture::_bind_methods()
 	using godot::D_METHOD;
 	using godot::PropertyInfo;
 
+	ClassDB::bind_method(D_METHOD("_get_rid"), &TsvReceiveTexture::_get_rid);
+	ClassDB::bind_method(D_METHOD("get_rid"), &TsvReceiveTexture::_get_rid);
+
 	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &TsvReceiveTexture::get_shared_texture_name);
 	ClassDB::bind_method(D_METHOD("set_shared_texture_name"), &TsvReceiveTexture::set_shared_texture_name);
-	ClassDB::add_property("SharedTexture", PropertyInfo(godot::Variant::STRING, "shared_texture_name"),
+	ClassDB::add_property("TsvReceiveTexture", PropertyInfo(godot::Variant::STRING, "shared_texture_name"),
 	                      "set_shared_texture_name", "get_shared_texture_name");
 
 	ClassDB::bind_method(D_METHOD("connect_to_frame_pre_draw"), &TsvReceiveTexture::connect_to_frame_pre_draw);
@@ -207,6 +216,9 @@ bool TsvReceiveTexture::_check_and_update_shared_texture()
 
 		this->_update_texture(data->width, data->height, convert_rendering_device_to_godot_format(data->format));
 		this->_shared_texture_initialized = true;
+
+		if(!this->is_connected_to_frame_pre_draw())
+			this->connect_to_frame_pre_draw();
 	}
 
 	return true;
@@ -254,7 +266,6 @@ void TsvReceiveTexture::receive_texture_internal()
 {
 	if(!this->_check_and_update_shared_texture())
 		return;
-
 
 		// Receive texture
 #ifdef USE_OPENGL

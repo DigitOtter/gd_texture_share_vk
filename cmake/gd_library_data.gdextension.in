@@ -1,0 +1,8 @@
+[configuration]
+
+entry_symbol = "@GODOT_DIR_NAME@_library_init"
+compatibility_minimum = 4.1
+
+[libraries]
+
+linux.x86_64 = "@GD_RES_PATH@/@INSTALL_FILENAME@.so"

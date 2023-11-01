@@ -129,7 +129,7 @@ void TsvSender::_bind_methods()
 
 	ClassDB::bind_method(D_METHOD("get_shared_texture_name"), &TsvSender::get_shared_texture_name);
 	ClassDB::bind_method(D_METHOD("set_shared_texture_name"), &TsvSender::set_shared_texture_name);
-	ClassDB::add_property("TextureSender", PropertyInfo(godot::Variant::STRING, "shared_texture_name"),
+	ClassDB::add_property("TsvSender", PropertyInfo(godot::Variant::STRING, "shared_texture_name"),
 	                      "set_shared_texture_name", "get_shared_texture_name");
 
 	ClassDB::bind_method(D_METHOD("connect_to_frame_post_draw"), &TsvSender::connect_to_frame_post_draw);

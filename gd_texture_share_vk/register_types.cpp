@@ -28,9 +28,9 @@ void uninitialize_module(ModuleInitializationLevel p_level)
 extern "C"
 {
 	// Initialization.
-	GDExtensionBool GDE_EXPORT texture_share_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address,
-	                                                      const GDExtensionClassLibraryPtr   p_library,
-	                                                      GDExtensionInitialization         *r_initialization)
+	GDExtensionBool GDE_EXPORT gd_texture_share_vk_library_init(GDExtensionInterfaceGetProcAddress p_get_proc_address,
+	                                                            const GDExtensionClassLibraryPtr   p_library,
+	                                                            GDExtensionInitialization         *r_initialization)
 	{
 		godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
 

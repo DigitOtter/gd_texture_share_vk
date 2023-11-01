@@ -22,7 +22,7 @@ class TsvReceiveTexture : public godot::Texture2D
 
 	bool _has_alpha() const override { return true; }
 
-	// virtual godot::RID _get_rid() override { return this->_texture; }
+	virtual godot::RID _get_rid() { return this->_texture; }
 
 	virtual void set_flags(const int64_t flags) { _flags = flags; }
 
