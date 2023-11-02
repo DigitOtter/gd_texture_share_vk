@@ -108,7 +108,7 @@ godot::String TsvReceiveTexture::get_shared_texture_name() const
 	return godot::String(this->_shared_texture_name.c_str());
 }
 
-void TsvReceiveTexture::set_shared_texture_name(godot::String shared_name)
+void TsvReceiveTexture::set_shared_texture_name(const godot::String &shared_name)
 {
 	if(godot::String(this->_shared_texture_name.c_str()) == shared_name)
 		return;
@@ -116,7 +116,7 @@ void TsvReceiveTexture::set_shared_texture_name(godot::String shared_name)
 	if(this->is_connected_to_frame_pre_draw())
 		this->disconnect_to_frame_pre_draw();
 
-	this->_shared_texture_name        = shared_name.ascii().ptr();
+	this->_shared_texture_name        = (const char *)shared_name.to_ascii_buffer().ptr();
 	this->_shared_texture_initialized = false;
 	this->_check_and_update_shared_texture();
 }

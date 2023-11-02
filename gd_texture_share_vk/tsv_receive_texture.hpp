@@ -42,7 +42,7 @@ class TsvReceiveTexture : public godot::Texture2D
 
 	/*! \brief Set the share channel name
 	 */
-	void set_shared_texture_name(godot::String shared_name);
+	void set_shared_texture_name(const godot::String &shared_name);
 
 	/*! \brief Manually receive texture. SHOULD be called after frame has been prepared (e.g. after `await
 	 * get_tree().process_frame`). It's easier to just connect this SharedTexture to the RenderingDevice's
