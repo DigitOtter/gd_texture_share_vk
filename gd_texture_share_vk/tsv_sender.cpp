@@ -22,7 +22,12 @@ TsvSender::TsvSender()
 	using godot::RID;
 
 	godot::RenderingDevice *const prd = godot::RenderingServer::get_singleton()->get_rendering_device();
-	assert(prd);
+	if(!prd)
+	{
+		WARN_PRINT("Unable to load RenderingDevice. Can't use TsvSender without Renderer");
+		return;
+	}
+
 	VkInstance vk_inst =
 		(VkInstance)prd->get_driver_resource(RenderingDevice::DRIVER_RESOURCE_VULKAN_INSTANCE, RID(), 0);
 	VkPhysicalDevice vk_ph_dev =
