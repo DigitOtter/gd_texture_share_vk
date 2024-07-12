@@ -54,6 +54,7 @@ TsvReceiveTexture::TsvReceiveTexture()
 TsvReceiveTexture::~TsvReceiveTexture()
 {
 	godot::RenderingServer *const prs = godot::RenderingServer::get_singleton();
+
 	if(this->_texture.is_valid())
 	{
 		prs->free_rid(this->_texture);
@@ -62,7 +63,12 @@ TsvReceiveTexture::~TsvReceiveTexture()
 
 #ifndef USE_OPENGL
 	godot::RenderingDevice *const prd = prs->get_rendering_device();
-	assert(prd);
+	if(!prd)
+	{
+		WARN_PRINT("Unable to load RenderingDevice. Can't use TsvReceiver without Renderer");
+		return;
+	}
+
 	VkDevice vk_dev =
 		(VkDevice)prd->get_driver_resource(godot::RenderingDevice::DRIVER_RESOURCE_VULKAN_DEVICE, godot::RID(), 0);
 

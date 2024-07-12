@@ -57,7 +57,12 @@ TsvSender::~TsvSender()
 {
 #ifndef USE_OPENGL
 	godot::RenderingDevice *const prd = godot::RenderingServer::get_singleton()->get_rendering_device();
-	assert(prd);
+	if(!prd)
+	{
+		WARN_PRINT("Unable to load RenderingDevice. Can't use TsvSender without Renderer");
+		return;
+	}
+
 	VkDevice vk_dev =
 		(VkDevice)prd->get_driver_resource(godot::RenderingDevice::DRIVER_RESOURCE_VULKAN_DEVICE, godot::RID(), 0);
 
